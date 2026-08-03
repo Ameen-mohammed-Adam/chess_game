@@ -1,0 +1,55 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "check-npm",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"--version"
+			],
+			"isBackground": false,
+			"problemMatcher": [],
+			"group": "build"
+		},
+		{
+			"label": "view-jest-versions",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"view",
+				"jest",
+				"version"
+			],
+			"isBackground": false,
+			"problemMatcher": [],
+			"group": "build"
+		},
+		{
+			"label": "view-nest-cli-versions",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"view",
+				"@nestjs/cli",
+				"version"
+			],
+			"isBackground": false,
+			"problemMatcher": [],
+			"group": "build"
+		},
+		{
+			"label": "view-ts-jest-version",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"view",
+				"ts-jest",
+				"version"
+			],
+			"isBackground": false,
+			"problemMatcher": [],
+			"group": "build"
+		}
+	]
+}
