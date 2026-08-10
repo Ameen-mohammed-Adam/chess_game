@@ -1,52 +1,77 @@
-import { BadRequestException, Injectable, Logger } from '@nestjs/common';
-import { Repository } from 'typeorm';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  InternalServerErrorException,
+  Logger,
+  UnauthorizedException,
+} from '@nestjs/common';
+import { QueryFailedError, Repository } from 'typeorm';
 import { User } from './user.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { CreatUserDto } from './dto/create-User.dto';
 import { ConfigService } from '@nestjs/config';
-
+import bcrypt from 'bcrypt';
+import { JwtService } from '@nestjs/jwt';
+import { JwtPayload } from './dto/jwt-payload.dto';
 @Injectable()
 export class AuthService {
   logger = new Logger('AuthService');
   constructor(
     @InjectRepository(User) private repository: Repository<User>,
     private configService: ConfigService,
+    private jwtService: JwtService,
   ) {}
 
-  async signUp(createUserDto: CreatUserDto): Promise<string> {
-    const { username, password, email, confirm_password } = createUserDto || 0;
-    if (!username || !password || !email || !confirm_password) {
-      this.logger.verbose(createUserDto);
+  async signUp(createUserDto: CreatUserDto): Promise<{ message: string }> {
+    const { username, password, email, confirmPassword } = createUserDto || {};
+    if (!username || !password || !email || !confirmPassword) {
       throw new BadRequestException(
-        'make sure all of these are not empty username, email, password, confirm_password',
+        'make sure all of these are not empty username, email, password, confirmPassword',
       );
     }
-    if (password !== confirm_password) {
+    if (password !== confirmPassword) {
       throw new BadRequestException(
-        'Password and confirm_password are not the same',
+        'Password and confirmPassword are not the same',
       );
     }
-    const confirm_email_Exists = await this.repository.find({
-      where: { email },
+    const salt = Number(this.configService.get('BCRYPT_SALT')) || 12;
+    const hashedPassword = await bcrypt.hash(password, salt);
+    const user = this.repository.create({
+      username,
+      password: hashedPassword,
+      email,
+      rating: 0,
     });
-    if (confirm_email_Exists.length) {
-      this.logger.verbose(`the email (${email}) already exists.`);
-      throw new BadRequestException('This email Already Exists.');
-    }
-    const confirm_username_Exists = await this.repository.find({
-      where: { username },
-    });
-    if (confirm_username_Exists.length) {
-      this.logger.verbose(`username ${username} Already Exists.`);
-      throw new BadRequestException('This username Already Exists.');
-    }
-    const user = this.repository.create({ username, password, email });
     try {
       await this.repository.save(user);
     } catch (error) {
-      this.logger.error('something Went Wrong', error);
-      return 'Error Something Went Wrong';
+      this.logger.error('something went wrong', error);
+      if ((error as QueryFailedError & { code?: string }).code === '23505') {
+        throw new ConflictException('Username or Email Already Exists.');
+      }
+      throw new InternalServerErrorException('Error Something Went Wrong');
     }
-    return 'SingUp SuccessFull.';
+    return { message: 'Signup Successfull.' };
+  }
+
+  async login(
+    email: string,
+    password: string,
+  ): Promise<{ accessToken: string }> {
+    const user = await this.repository.findOne({ where: { email } });
+    if (!user) {
+      throw new UnauthorizedException(`email or password are incorrect`);
+    }
+    const verifyPassword = await bcrypt.compare(password, user.password);
+    if (!verifyPassword) {
+      throw new UnauthorizedException(`email or password are incorrect`);
+    }
+    const payload: JwtPayload = { username: user.username, email: user.email };
+    const accessToken = this.jwtService.sign(payload, {
+      secret: this.configService.get('JWT_SECRET'),
+      expiresIn: this.configService.get('JWT_EXPIRESIN'),
+    });
+    return { accessToken };
   }
 }

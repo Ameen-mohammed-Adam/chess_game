@@ -7,5 +7,7 @@ export const configValidationSchema = Joi.object({
   DB_USERNAME: Joi.string().required(),
   DB_PASSWOR: Joi.string().required(),
   DB_DATABASE: Joi.string().required(),
-  JWT_SECRET: Joi.string(),
+  JWT_SECRET: Joi.string().required(),
+  JWT_EXPIRESIN: Joi.string().required(),
+  BCRYPT_SALT: Joi.number().required(),
 });

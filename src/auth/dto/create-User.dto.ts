@@ -1,6 +1,6 @@
 export class CreatUserDto {
   username!: string;
   password!: string;
-  confirm_password!: string;
+  confirmPassword!: string;
   email!: string;
 }
