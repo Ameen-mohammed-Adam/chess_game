@@ -1,3 +1,4 @@
+import { Optional } from '@nestjs/common';
 import {
   Column,
   CreateDateColumn,
@@ -20,8 +21,12 @@ export class User {
   @Column()
   password!: string;
 
-  @Column()
+  @Column({ default: 0 })
   rating!: number;
+
+  @Optional()
+  @Column({ default: '' })
+  image?: string;
 
   // //each user Can have multiple games
   // @Column()
@@ -29,7 +34,7 @@ export class User {
 
   // //each user can have multiple friends
   // @Column()
-  // friends!: string;
+  // friends!: uuid;
 
   @CreateDateColumn()
   createdAt!: Date;

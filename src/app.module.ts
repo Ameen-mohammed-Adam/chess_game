@@ -5,6 +5,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { configValidationSchema } from './config.Schema';
 import { User } from './auth/user.entity';
 import { AppController } from './app.controller';
+import { UserModule } from './user/user.module';
 
 @Module({
   imports: [
@@ -28,7 +29,9 @@ import { AppController } from './app.controller';
     ConfigModule.forRoot({
       envFilePath: `.env.stage.${process.env.STAGE}`,
       validationSchema: configValidationSchema,
+      isGlobal: true,
     }),
+    UserModule,
   ],
   controllers: [AppController],
 })
