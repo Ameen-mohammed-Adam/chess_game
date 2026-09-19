@@ -3,9 +3,10 @@ import { AuthModule } from './auth/auth.module';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { configValidationSchema } from './config.Schema';
-import { User } from './auth/user.entity';
 import { AppController } from './app.controller';
 import { UserModule } from './user/user.module';
+import { GameModule } from './game/game.module';
+import { AiAgentModule } from './ai-agent/ai-agent.module';
 
 @Module({
   imports: [
@@ -22,7 +23,7 @@ import { UserModule } from './user/user.module';
           password: configService.get('DB_PASSWOR'),
           database: configService.get('DB_DATABASE'),
           synchronize: true,
-          entities: [User],
+          autoLoadEntities: true,
         };
       },
     }),
@@ -32,6 +33,8 @@ import { UserModule } from './user/user.module';
       isGlobal: true,
     }),
     UserModule,
+    GameModule,
+    AiAgentModule,
   ],
   controllers: [AppController],
 })

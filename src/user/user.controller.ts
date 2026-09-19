@@ -1,6 +1,8 @@
 import {
   Controller,
   FileTypeValidator,
+  Get,
+  Param,
   ParseFilePipe,
   Post,
   UploadedFile,
@@ -13,13 +15,15 @@ import { User } from '../auth/user.entity';
 import { AuthGuard } from '@nestjs/passport';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { UserService } from './user.service';
+import { GetUserDto } from './dto/getUser.dto';
+import { GetUserByIdDto } from './dto/getUserById.dto';
 @Controller('user')
 @UseGuards(AuthGuard())
 export class UserController {
   constructor(private userService: UserService) {}
-  @Post()
+  @Post('/image')
   @UseInterceptors(FileInterceptor('image'))
-  get(
+  uploadImage(
     @UploadedFile(
       new ParseFilePipe({
         validators: [new FileTypeValidator({ fileType: /(jpg|jpeg|png)$/ })],
@@ -30,5 +34,15 @@ export class UserController {
     @GetUser() user: User,
   ) {
     return this.userService.uploadImage(user, image);
+  }
+
+  @Get('/')
+  getMe(@GetUser() user: User): GetUserDto {
+    return this.userService.getMe(user);
+  }
+
+  @Get('/:id')
+  getUserById(@Param('id') userId: string): Promise<GetUserByIdDto> {
+    return this.userService.getUserById(userId);
   }
 }

@@ -1,7 +1,6 @@
-import { Body, Controller, Post, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Post } from '@nestjs/common';
 import { CreatUserDto } from './dto/create-User.dto';
 import { AuthService } from './auth.service';
-import { AuthGuard } from '@nestjs/passport';
 
 @Controller('auth')
 export class AuthController {
@@ -18,11 +17,5 @@ export class AuthController {
     @Body('password') password: string,
   ): Promise<{ accessToken: string }> {
     return this.authService.login(email, password);
-  }
-
-  @UseGuards(AuthGuard())
-  @Post('lol')
-  fun(@Req() req) {
-    console.log(req);
   }
 }

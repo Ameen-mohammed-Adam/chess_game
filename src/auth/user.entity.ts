@@ -3,9 +3,11 @@ import {
   Column,
   CreateDateColumn,
   Entity,
+  OneToMany,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
+import { Game } from '../game/game.entity';
 
 @Entity()
 export class User {
@@ -21,24 +23,35 @@ export class User {
   @Column()
   password!: string;
 
-  @Column({ default: 0 })
+  @Column({ default: 0, type: 'int' })
   rating!: number;
 
   @Optional()
-  @Column({ default: '' })
-  image?: string;
+  @Column({ default: null })
+  imageUrl!: string;
 
-  // //each user Can have multiple games
-  // @Column()
-  // games!: string;
+  @Optional()
+  @Column({ default: null })
+  imageId?: string;
 
-  // //each user can have multiple friends
-  // @Column()
-  // friends!: uuid;
+  @Column({ default: 0, type: 'int' })
+  gamesPlayed!: number;
+
+  @Column({ default: 0, type: 'int' })
+  wins!: number;
+
+  @Column({ default: 0, type: 'int' })
+  losses!: number;
+
+  @Column({ default: 0, type: 'int' })
+  draws!: number;
 
   @CreateDateColumn()
   createdAt!: Date;
 
   @UpdateDateColumn()
   updatedAt!: Date;
+
+  @OneToMany(() => Game, (game) => game.user, { eager: true })
+  games!: Game[];
 }

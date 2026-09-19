@@ -14,14 +14,18 @@ import { ConfigService } from '@nestjs/config';
 import bcrypt from 'bcrypt';
 import { JwtService } from '@nestjs/jwt';
 import { JwtPayload } from './dto/jwt-payload.dto';
+import { SignUpSchema } from './signup.Schema';
 @Injectable()
 export class AuthService {
-  logger = new Logger('AuthService');
+  readonly logger = new Logger('AuthService');
   constructor(
     @InjectRepository(User) private repository: Repository<User>,
     private configService: ConfigService,
     private jwtService: JwtService,
+    // private nodeMailer: ,
   ) {}
+
+  async emailSender() {}
 
   async signUp(createUserDto: CreatUserDto): Promise<{ message: string }> {
     const { username, password, email, confirmPassword } = createUserDto || {};
@@ -35,7 +39,11 @@ export class AuthService {
         'Password and confirmPassword are not the same',
       );
     }
-    const salt = Number(this.configService.get('BCRYPT_SALT')) || 12;
+    const validate = SignUpSchema.validate({ username, password, email });
+    if (validate.error) {
+      throw new BadRequestException({ Error: validate.error?.message });
+    }
+    const salt = this.configService.get<number>('BCRYPT_SALT') || 12;
     const hashedPassword = await bcrypt.hash(password, salt);
     const user = this.repository.create({
       username,
