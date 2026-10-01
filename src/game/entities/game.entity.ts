@@ -1,0 +1,52 @@
+import {
+  Column,
+  CreateDateColumn,
+  Entity,
+  ManyToOne,
+  OneToMany,
+  PrimaryGeneratedColumn,
+  UpdateDateColumn,
+} from 'typeorm';
+import { User } from '../../auth/user.entity';
+import { Exclude } from 'class-transformer';
+import { GameMode, GameStatus, PlayerColor } from '../game.enums';
+import { AIAgent } from '../../ai-agent/ai-agent.types';
+import { Move } from './move.entity';
+
+@Entity()
+export class Game {
+  @PrimaryGeneratedColumn('uuid')
+  id!: string;
+
+  @ManyToOne(() => User, (user) => user.games, { eager: false })
+  @Exclude({ toPlainOnly: true })
+  user!: User;
+
+  @OneToMany(() => Move, (move) => move.gameId, { eager: true })
+  moves!: Move[];
+
+  @Column({ enum: GameStatus, default: GameStatus.IN_PROGRESS })
+  status!: GameStatus;
+
+  @Column({ enum: GameMode })
+  mode!: GameMode;
+
+  @Column({ enum: AIAgent })
+  opponent!: AIAgent;
+
+  @Column({ enum: PlayerColor })
+  playerColor!: PlayerColor;
+
+  @Column({
+    default: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
+  })
+  ganeBoard!: string;
+
+  @Column({ enum: ['white', 'black'] })
+  turn!: string;
+
+  @CreateDateColumn()
+  createdAt!: Date;
+  @UpdateDateColumn()
+  lastUpdatedAt!: Date;
+}
