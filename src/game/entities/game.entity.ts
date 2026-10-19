@@ -11,7 +11,7 @@ import { User } from '../../auth/user.entity';
 import { Exclude } from 'class-transformer';
 import { GameMode, GameStatus, PlayerColor } from '../game.enums';
 import { AIAgent } from '../../ai-agent/ai-agent.types';
-import { Move } from './move.entity';
+import { Moves } from './move.entity';
 
 @Entity()
 export class Game {
@@ -22,8 +22,8 @@ export class Game {
   @Exclude({ toPlainOnly: true })
   user!: User;
 
-  @OneToMany(() => Move, (move) => move.gameId, { eager: true })
-  moves!: Move[];
+  @OneToMany(() => Moves, (move) => move.game, { eager: true })
+  moves!: Moves[];
 
   @Column({ enum: GameStatus, default: GameStatus.IN_PROGRESS })
   status!: GameStatus;
@@ -40,9 +40,9 @@ export class Game {
   @Column({
     default: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
   })
-  ganeBoard!: string;
+  gameBoard!: string;
 
-  @Column({ enum: ['white', 'black'] })
+  @Column({ enum: ['w', 'b'], default: 'w' })
   turn!: string;
 
   @CreateDateColumn()

@@ -14,6 +14,7 @@ import { AuthGuard } from '@nestjs/passport';
 import { Game } from './entities/game.entity';
 import { GetGameFilterDto } from './dto/get-game-filter.dto';
 import { CreateGameDto } from './dto/create-game.dto';
+import { MakeMoveDto } from './dto/make-move.dto';
 
 @Controller('game')
 @UseGuards(AuthGuard())
@@ -41,5 +42,14 @@ export class GameController {
   @Delete('/:id')
   deleteGame(@Param('id') id: string, @GetUser() user: User): Promise<string> {
     return this.gameService.deleteGame(id, user);
+  }
+
+  @Post('/:id/moves')
+  makeMove(
+    @Param('id') id: string,
+    @GetUser() user: User,
+    @Body() makeMoveDto: MakeMoveDto,
+  ) {
+    return this.gameService.makeMove(makeMoveDto, id, user);
   }
 }

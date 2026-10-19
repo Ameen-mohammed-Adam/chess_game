@@ -2,12 +2,15 @@ import { Column, Entity, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
 import { Game } from './game.entity';
 
 @Entity()
-export class Move {
+export class Moves {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
 
-  @ManyToOne(() => Game, (game) => game.moves, { eager: false })
-  gameId!: Game[];
+  @ManyToOne(() => Game, (game) => game.moves, {
+    eager: false,
+    nullable: false,
+  })
+  game!: Game;
 
   @Column()
   from!: string;

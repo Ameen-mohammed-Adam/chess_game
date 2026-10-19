@@ -4,6 +4,7 @@ export enum GameStatus {
   LOST = 'LOST',
   DRAW = 'DRAW',
   ABANDODNED = 'ABANDODNED',
+  STALEMATE = 'STALEMATE',
 }
 
 export enum GameMode {
