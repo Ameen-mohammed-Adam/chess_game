@@ -9,13 +9,10 @@ export enum GameStatus {
 
 export enum GameMode {
   VS_AI = 'VS_AI',
-  VS_PLAYER = 'VS_PLAYER',
+  // VS_PLAYER = 'VS_PLAYER',
 }
 
 export enum PlayerColor {
   WHITE = 'WHITE',
   BLACK = 'BLACK',
 }
-
-//playerColor
-//AI_AGENT

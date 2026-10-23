@@ -1,5 +1,5 @@
 export enum AIAgent {
-  CHATGPT = 'CHATGPT',
+  // CHATGPT = 'CHATGPT',
   GEMMEA = 'GEMMEA',
 }
 

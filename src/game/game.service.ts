@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  HttpException,
   Injectable,
   InternalServerErrorException,
   Logger,
@@ -17,6 +18,16 @@ import { Moves } from './entities/move.entity';
 import { MakeMoveDto } from './dto/make-move.dto';
 import { AiAgentService } from '../ai-agent/ai-agent.service';
 import { AIAgent } from '../ai-agent/ai-agent.types';
+
+type MakeMoveResult = {
+  message: string;
+  data: {
+    gameBoard: string;
+    turn: string;
+    status: GameStatus;
+    gameResult?: string;
+  };
+};
 @Injectable()
 export class GameService {
   private logger = new Logger();
@@ -31,7 +42,7 @@ export class GameService {
     user: User,
     getGameFilterDto: GetGameFilterDto,
   ): Promise<Game[]> {
-    const query = this.gameRepository.createQueryBuilder();
+    const query = this.gameRepository.createQueryBuilder('game');
     query.where({ user });
     const { status, mode } = getGameFilterDto;
     if (status) {
@@ -63,16 +74,19 @@ export class GameService {
     return game;
   }
 
-  async deleteGame(id: string, user: User): Promise<string> {
+  async deleteGame(
+    id: string,
+    user: User,
+  ): Promise<{ message: string; data: null }> {
     const result = await this.gameRepository.delete({
       id,
       user: { id: user.id },
     });
 
     if (result.affected === 0) {
-      return `Game with id: ${id} was not found. `;
+      throw new NotFoundException(`Game with id: ${id} was not found. `);
     }
-    return `Game deleted successfully`;
+    return { message: `Game deleted successfully`, data: null };
   }
   async createGame(user: User, createGameDto: CreateGameDto): Promise<Game> {
     const game = await this.gameRepository.findOne({
@@ -93,9 +107,8 @@ export class GameService {
       mode,
       opponent: ai_Agent,
     });
-    await this.gameRepository.save(newGame);
     user.gamesPlayed += 1;
-    user.games.push(newGame);
+    await this.gameRepository.save(newGame);
     await this.userRepository.save(user);
     return newGame;
   }
@@ -104,15 +117,11 @@ export class GameService {
     makeMoveDto: MakeMoveDto,
     gameId: string,
     user: User,
-  ): Promise<
-    | { gameBoard: string; turn: string }
-    | { message: string; GameResult: string }
-  > {
-    //make sure the game does exist
+  ): Promise<MakeMoveResult> {
     const { from, to, san, promotion = undefined } = makeMoveDto || {};
     if (!from || !to || !san) {
       throw new BadRequestException(
-        'make sure to add from, to and san. indicating where from the peice moved, to where did it go and the san ',
+        'make sure to add from, to and san. indicating where from the piece moved, to where did it go and the san ',
       );
     }
     const game = await this.gameRepository.findOne({
@@ -124,50 +133,65 @@ export class GameService {
     if (game.status !== GameStatus.IN_PROGRESS) {
       throw new BadRequestException("you can't make moves to this game");
     }
+
     try {
-      //making the user move and creating it
+      // player move
       const chessTester = new Chess(game.gameBoard);
-      chessTester.move({ from, to, promotion });
-      const PlayerMove = this.moveRepository.create({
+      const testMove = chessTester.move({ from, to, promotion });
+      const playerMove = this.moveRepository.create({
         game,
-        from,
-        to,
-        san,
+        from: testMove.from,
+        to: testMove.to,
+        san: testMove.san,
         playedBy: `${user.username}`,
       });
 
-      // check if the game is over after Player Move
+      // game over after player move
       if (chessTester.isGameOver()) {
+        const winner = chessTester.turn() === 'b' ? 'WHITE' : 'BLACK';
+        let message: string;
+        let gameResult: string;
+
+        if (chessTester.isCheckmate()) {
+          game.status = GameStatus.WIN;
+          message = 'Good Game';
+          gameResult = `${winner} Won.`;
+        } else if (chessTester.isStalemate()) {
+          // must be checked before isDraw(), which also returns true for stalemate
+          game.status = GameStatus.STALEMATE;
+          message = 'Stalemate.';
+          gameResult = 'Stalemate';
+        } else {
+          game.status = GameStatus.DRAW;
+          message = `Nice Try, It's a Draw`;
+          gameResult = 'Draw';
+        }
+
         game.gameBoard = chessTester.fen();
         game.turn = chessTester.turn();
         await this.gameRepository.save(game);
-        await this.moveRepository.save(PlayerMove);
+        await this.moveRepository.save(playerMove);
 
-        if (chessTester.isCheckmate()) {
-          const Winner = chessTester.turn() === 'b' ? 'WHITE' : 'BLACK';
-          game.status = GameStatus.WIN;
-          return { message: 'Good Game', GameResult: `${Winner} Won.` };
-        }
-        if (chessTester.isDraw()) {
-          game.status = GameStatus.DRAW;
-          return { message: `Nice Try, It's a Draw`, GameResult: 'Draw' };
-        }
-        if (chessTester.isStalemate()) {
-          game.status = GameStatus.STALEMATE;
-          return { message: `StaleMate.`, GameResult: 'StaleMate' };
-        }
+        return {
+          message,
+          data: {
+            gameBoard: game.gameBoard,
+            turn: game.turn,
+            status: game.status,
+            gameResult,
+          },
+        };
       }
 
-      //create Ai's Move
+      // AI move
       let aiMove: string | null = null;
       switch (game.opponent) {
         case AIAgent.GEMMEA:
           aiMove = await this.aiAgentService.Gammea4(chessTester.fen());
           break;
-
         default:
           throw new BadRequestException(
-            `Unsupported opponent: ${game.opponent}`,
+            `Unsupported opponent: ${String(game.opponent)}`,
           );
       }
       const move = chessTester.move(aiMove, { strict: false });
@@ -179,43 +203,95 @@ export class GameService {
         playedBy: `${game.opponent}`,
       });
 
-      // check if the game is over after Ai Move
+      // game over after AI move
       if (chessTester.isGameOver()) {
+        const winner = chessTester.turn() === 'b' ? 'WHITE' : 'BLACK';
+        let message: string;
+        let gameResult: string;
+
+        if (chessTester.isCheckmate()) {
+          game.status = GameStatus.LOST;
+          message = 'Good Game';
+          gameResult = `${winner} Won.`;
+        } else if (chessTester.isStalemate()) {
+          game.status = GameStatus.STALEMATE;
+          message = 'Stalemate.';
+          gameResult = 'Stalemate';
+        } else {
+          game.status = GameStatus.DRAW;
+          message = `Nice Try, It's a Draw`;
+          gameResult = 'Draw';
+        }
+
         game.gameBoard = chessTester.fen();
         game.turn = chessTester.turn();
         await this.gameRepository.save(game);
-        await this.moveRepository.save([PlayerMove, aiMve]);
+        await this.moveRepository.save([playerMove, aiMve]);
 
-        if (chessTester.isCheckmate()) {
-          const Winner = chessTester.turn() === 'b' ? 'WHITE' : 'BLACK';
-          game.status = GameStatus.LOST;
-          return { message: 'Good Game', GameResult: `${Winner} Won.` };
-        }
-        if (chessTester.isDraw()) {
-          game.status = GameStatus.DRAW;
-          return { message: `Nice Try, It's a Draw`, GameResult: 'Draw' };
-        }
-        if (chessTester.isStalemate()) {
-          game.status = GameStatus.STALEMATE;
-          return { message: `StaleMate.`, GameResult: 'StaleMate' };
-        }
+        return {
+          message,
+          data: {
+            gameBoard: game.gameBoard,
+            turn: game.turn,
+            status: game.status,
+            gameResult,
+          },
+        };
       }
 
-      // saving everything
+      // game continues
       game.gameBoard = chessTester.fen();
       game.turn = chessTester.turn();
       await this.gameRepository.save(game);
-      await this.moveRepository.save([PlayerMove, aiMve]);
-      return { gameBoard: game.gameBoard, turn: game.turn };
+      await this.moveRepository.save([playerMove, aiMve]);
+
+      return {
+        message: 'Move played',
+        data: {
+          gameBoard: game.gameBoard,
+          turn: game.turn,
+          status: game.status,
+        },
+      };
     } catch (error) {
+      // let Nest exceptions (e.g. "Unsupported opponent") pass through untouched
+      if (error instanceof HttpException) throw error;
+
       this.logger.error(
         `${(error as Error)?.message}`,
         (error as Error)?.stack,
       );
       if ((error as Error).message.includes('Invalid move: ')) {
-        throw new BadRequestException(`Imvalid Move made: ${makeMoveDto.san}`);
+        throw new BadRequestException(`Invalid move made: ${makeMoveDto.san}`);
       }
       throw new InternalServerErrorException();
     }
+  }
+
+  async abandonGame(
+    gameId: string,
+    user: User,
+  ): Promise<{ message: string; data: null }> {
+    const game = await this.getGameById(gameId, user);
+    if (game.moves.length >= 2) {
+      throw new BadRequestException(
+        `since you made a move, you can only Resign this game.`,
+      );
+    }
+    await this.deleteGame(game.id, user);
+    return { message: 'Game Abandoned', data: null };
+  }
+  async resign(
+    gameId: string,
+    user: User,
+  ): Promise<{ message: string; data: null }> {
+    const game = await this.getGameById(gameId, user);
+    if (game.status !== GameStatus.IN_PROGRESS) {
+      throw new BadRequestException(`You can't resign this game`);
+    }
+    game.status = GameStatus.LOST;
+    await this.gameRepository.save(game);
+
+    return { message: 'Game Resigned Successfully', data: null };
   }
 }

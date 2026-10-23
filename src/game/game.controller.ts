@@ -22,15 +22,12 @@ export class GameController {
   constructor(private gameService: GameService) {}
 
   @Get('/')
-  getGames(
-    @GetUser() user: User,
-    @Param() getGameFilterDto: GetGameFilterDto,
-  ): Promise<Game[]> {
+  getGames(@GetUser() user: User, @Param() getGameFilterDto: GetGameFilterDto) {
     return this.gameService.getMyGames(user, getGameFilterDto);
   }
 
   @Get('/:id')
-  getGameById(@Param('id') id: string, @GetUser() user: User): Promise<Game> {
+  getGameById(@Param('id') id: string, @GetUser() user: User) {
     return this.gameService.getGameById(id, user);
   }
 
@@ -40,7 +37,7 @@ export class GameController {
   }
 
   @Delete('/:id')
-  deleteGame(@Param('id') id: string, @GetUser() user: User): Promise<string> {
+  deleteGame(@Param('id') id: string, @GetUser() user: User) {
     return this.gameService.deleteGame(id, user);
   }
 
@@ -51,5 +48,15 @@ export class GameController {
     @Body() makeMoveDto: MakeMoveDto,
   ) {
     return this.gameService.makeMove(makeMoveDto, id, user);
+  }
+
+  @Delete('/:id/abandon')
+  abandonGame(@Param('id') id: string, @GetUser() user: User) {
+    return this.gameService.abandonGame(id, user);
+  }
+
+  @Post('/:id/resign')
+  resignGame(@Param('id') id: string, @GetUser() user: User) {
+    return this.gameService.resign(id, user);
   }
 }
