@@ -7,6 +7,7 @@ import { AppController } from './app.controller';
 import { UserModule } from './user/user.module';
 import { GameModule } from './game/game.module';
 import { AiAgentModule } from './ai-agent/ai-agent.module';
+import * as pg from 'pg';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { AiAgentModule } from './ai-agent/ai-agent.module';
       useFactory: (configService: ConfigService) => {
         return {
           type: 'postgres',
+          driver: pg,
           url: configService.get('DB_URL'),
           ssl:
             process.env.NODE_ENV === 'prod'
