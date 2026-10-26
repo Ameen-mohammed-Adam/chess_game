@@ -11,26 +11,26 @@ import { AiAgentModule } from './ai-agent/ai-agent.module';
 @Module({
   imports: [
     AuthModule,
+    ConfigModule.forRoot({
+      envFilePath: `.env.stage.${process.env.STAGE}`,
+      validationSchema: configValidationSchema,
+      isGlobal: true,
+    }),
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => {
         return {
           type: 'postgres',
-          host: configService.get('DB_HOST'),
-          port: configService.get('DB_PORT'),
-          username: configService.get('DB_USERNAME'),
-          password: configService.get('DB_PASSWOR'),
-          database: configService.get('DB_DATABASE'),
-          synchronize: true,
+          url: configService.get('DB_URL'),
+          ssl:
+            process.env.NODE_ENV === 'prod'
+              ? { rejectUnauthorized: false }
+              : false,
+          synchronize: false,
           autoLoadEntities: true,
         };
       },
-    }),
-    ConfigModule.forRoot({
-      envFilePath: `.env.stage.${process.env.STAGE}`,
-      validationSchema: configValidationSchema,
-      isGlobal: true,
     }),
     UserModule,
     GameModule,

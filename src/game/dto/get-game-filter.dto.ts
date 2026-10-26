@@ -14,4 +14,10 @@ export class GetGameFilterDto {
   @IsOptional()
   @IsEnum(AIAgent)
   ai_Agent?: AIAgent;
+
+  @IsOptional()
+  limit?: number;
+
+  @IsOptional()
+  page?: number;
 }

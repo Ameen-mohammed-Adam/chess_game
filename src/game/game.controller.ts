@@ -5,6 +5,7 @@ import {
   Get,
   Param,
   Post,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import { GameService } from './game.service';
@@ -22,7 +23,7 @@ export class GameController {
   constructor(private gameService: GameService) {}
 
   @Get('/')
-  getGames(@GetUser() user: User, @Param() getGameFilterDto: GetGameFilterDto) {
+  getGames(@GetUser() user: User, @Query() getGameFilterDto: GetGameFilterDto) {
     return this.gameService.getMyGames(user, getGameFilterDto);
   }
 

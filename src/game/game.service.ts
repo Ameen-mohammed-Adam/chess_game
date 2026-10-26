@@ -41,10 +41,11 @@ export class GameService {
   async getMyGames(
     user: User,
     getGameFilterDto: GetGameFilterDto,
-  ): Promise<Game[]> {
+  ): Promise<{ games: Game[]; meta: { limit: number; skip: number } }> {
     const query = this.gameRepository.createQueryBuilder('game');
     query.where({ user });
     const { status, mode } = getGameFilterDto;
+
     if (status) {
       query.andWhere('game.status LIKE :status', { status: `%${status}%` });
     }
@@ -52,9 +53,18 @@ export class GameService {
       const upperModer = mode.toUpperCase();
       query.andWhere('game.mode LIKE :mode', { mode: `%${upperModer}%` });
     }
+
+    // pagination
+    const limit = getGameFilterDto.limit ?? 10;
+    const page = getGameFilterDto.page ?? 1;
+    const skip = (page - 1) * limit;
+
+    query.limit(limit);
+    query.offset(skip);
+
     try {
       const games = await query.getMany();
-      return games;
+      return { games, meta: { limit, skip } };
     } catch (error) {
       this.logger.error(
         `something went wrong with user ${user.username}.`,
