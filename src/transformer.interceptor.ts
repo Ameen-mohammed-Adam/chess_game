@@ -8,6 +8,7 @@ import {
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { instanceToPlain } from 'class-transformer';
+import { AppController } from './app.controller';
 
 type PlainObject = Record<string, unknown>;
 
@@ -26,7 +27,9 @@ export class TransformInterceptor<T> implements NestInterceptor<
     const ctx = context.switchToHttp();
     const response = ctx.getResponse<{ statusCode: number }>();
     const statusCode = response.statusCode;
-
+    if (context.getClass() === AppController) {
+      return next.handle() as Observable<ResponseInterface<T>>;
+    }
     return next.handle().pipe(
       map((data: T): ResponseInterface<T> => {
         // 1. Turn class instances into plain objects safely
