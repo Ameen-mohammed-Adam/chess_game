@@ -117,9 +117,9 @@ export class GameService {
       mode,
       opponent: ai_Agent,
     });
-    user.gamesPlayed += 1;
     await this.gameRepository.save(newGame);
-    await this.userRepository.save(user);
+    await this.userRepository.increment({ id: user.id }, 'gamesPlayed', 1);
+
     return newGame;
   }
 
