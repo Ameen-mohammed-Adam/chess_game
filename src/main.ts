@@ -10,6 +10,7 @@ async function bootstrap() {
   app.enableCors({
     origin: ['https://chess-game-vs-ai.vercel.app', 'http://localhost:3000'],
   });
+  //test
   await app.listen(process.env.PORT ?? 3000);
   logger.log('App Running on Port 3000');
 }
