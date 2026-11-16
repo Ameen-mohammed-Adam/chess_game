@@ -88,6 +88,13 @@ export class GameService {
     id: string,
     user: User,
   ): Promise<{ message: string; data: null }> {
+    const game = await this.gameRepository.findOne({
+      where: { id, user: { id: user.id } },
+    });
+    if (!game) {
+      throw new NotFoundException(`game With id ${id} was not found.`);
+    }
+    await this.moveRepository.delete({ game: { id: game.id } });
     const result = await this.gameRepository.delete({
       id,
       user: { id: user.id },
@@ -119,6 +126,7 @@ export class GameService {
     });
     await this.gameRepository.save(newGame);
     await this.userRepository.increment({ id: user.id }, 'gamesPlayed', 1);
+    await this.userRepository.increment({ id: user.id }, 'gamesPlayed wins', 1);
 
     return newGame;
   }
@@ -166,19 +174,23 @@ export class GameService {
           game.status = GameStatus.WIN;
           message = 'Good Game';
           gameResult = `${winner} Won.`;
+          user.wins += 1;
         } else if (chessTester.isStalemate()) {
           // must be checked before isDraw(), which also returns true for stalemate
           game.status = GameStatus.STALEMATE;
           message = 'Stalemate.';
           gameResult = 'Stalemate';
+          user.draws += 1;
         } else {
           game.status = GameStatus.DRAW;
           message = `Nice Try, It's a Draw`;
           gameResult = 'Draw';
+          user.draws += 1;
         }
 
         game.gameBoard = chessTester.fen();
         game.turn = chessTester.turn();
+        await this.userRepository.save(user);
         await this.gameRepository.save(game);
         await this.moveRepository.save(playerMove);
 
@@ -223,21 +235,24 @@ export class GameService {
           game.status = GameStatus.LOST;
           message = 'Good Game';
           gameResult = `${winner} Won.`;
+          user.losses += 1;
         } else if (chessTester.isStalemate()) {
           game.status = GameStatus.STALEMATE;
           message = 'Stalemate.';
           gameResult = 'Stalemate';
+          user.draws += 1;
         } else {
           game.status = GameStatus.DRAW;
           message = `Nice Try, It's a Draw`;
           gameResult = 'Draw';
+          user.draws += 1;
         }
 
         game.gameBoard = chessTester.fen();
         game.turn = chessTester.turn();
         await this.gameRepository.save(game);
         await this.moveRepository.save([playerMove, aiMve]);
-
+        await this.userRepository.save(user);
         return {
           message,
           data: {
