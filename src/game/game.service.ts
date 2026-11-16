@@ -103,8 +103,10 @@ export class GameService {
     if (result.affected === 0) {
       throw new NotFoundException(`Game with id: ${id} was not found. `);
     }
+    await this.userRepository.decrement({ id: user.id }, 'gamesPlayed', 1);
     return { message: `Game deleted successfully`, data: null };
   }
+
   async createGame(user: User, createGameDto: CreateGameDto): Promise<Game> {
     const game = await this.gameRepository.findOne({
       where: { status: GameStatus.IN_PROGRESS, user: { id: user.id } },
@@ -126,7 +128,6 @@ export class GameService {
     });
     await this.gameRepository.save(newGame);
     await this.userRepository.increment({ id: user.id }, 'gamesPlayed', 1);
-    await this.userRepository.increment({ id: user.id }, 'gamesPlayed wins', 1);
 
     return newGame;
   }
